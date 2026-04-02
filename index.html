@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Price Finder | Barcode Scanner</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ShoFly <span>BKam</span></h1>
+            <p>Smart Barcode Price Finder</p>
+        </header>
+
+        <main>
+            <div id="reader-wrapper">
+                <div id="reader"></div>
+            </div>
+
+            <div class="search-box">
+                <input type="text" id="manual-input" placeholder="Enter barcode manually..." maxlength="13">
+                <button id="search-btn">Find</button>
+            </div>
+
+            <div id="result-card" class="result-card hidden">
+                <div class="product-info">
+                    <div class="brand" id="prod-brand">---</div>
+                    <h2 id="prod-name-en">---</h2>
+                    <h3 id="prod-name-ar">---</h3>
+                    <div class="meta">
+                        <span id="prod-cat">---</span> | <span id="prod-size">---</span>
+                    </div>
+                </div>
+                <div class="price-section">
+                    <div class="price-label">Current Price</div>
+                    <div class="price-value">
+                        <span id="prod-price">0.00</span>
+                        <span class="currency" id="prod-curr">EGP</span>
+                    </div>
+                    <div class="store-info">
+                        At <strong id="prod-store">---</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div id="not-found" class="info-message hidden">
+                Product not found. Try another barcode.
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -7,17 +7,18 @@ async function loadData() {
     const response = await fetch("egypt_supermarket_products_large.json");
     if (!response.ok) throw new Error("Failed to fetch data");
     const data = await response.json();
-    
+
     // Create a fast-lookup map by barcode
-    data.products.forEach(p => {
-        productMap.set(p.barcode, p);
+    console.log("data.products", data.products);
+    data.products.forEach((p) => {
+      productMap.set(p.barcode, p);
     });
-    
+
     console.log(`Database indexed: ${productMap.size} products.`);
   } catch (error) {
     console.error("Error loading product data:", error);
     alert(
-      "Could not load product database. Please ensure you are running through a local web server."
+      "Could not load product database. Please ensure you are running through a local web server.",
     );
   }
 }
@@ -35,7 +36,7 @@ function findProduct(barcode) {
   resultCard.classList.add("hidden");
   notFound.classList.add("hidden");
   loader.classList.add("hidden"); // Ensure loader is hidden
-  
+
   // Instant search using Map (O(1))
   const product = productMap.get(cleanBarcode);
 
@@ -70,18 +71,16 @@ function updateUI(product) {
   document.getElementById("prod-name-en").textContent = product.product_name.en;
   document.getElementById("prod-name-ar").textContent = product.product_name.ar;
   document.getElementById("prod-cat").textContent = product.category;
-  document.getElementById(
-    "prod-size"
-  ).textContent = `${product.size.value} ${product.size.unit}`;
+  document.getElementById("prod-size").textContent =
+    `${product.size.value} ${product.size.unit}`;
 
   // Update price
   const priceEl = document.getElementById("prod-price");
   priceEl.textContent = product.price.toFixed(2);
 
   document.getElementById("prod-curr").textContent = product.currency;
-  document.getElementById(
-    "prod-store"
-  ).textContent = `${product.store.name} — ${product.store.city}`;
+  document.getElementById("prod-store").textContent =
+    `${product.store.name} — ${product.store.city}`;
 }
 
 // Scanner Success Callback
@@ -99,7 +98,7 @@ const html5QrcodeScanner = new Html5QrcodeScanner(
     qrbox: { width: 250, height: 150 },
     aspectRatio: 1.777778, // 16:9
   },
-  /* verbose= */ false
+  /* verbose= */ false,
 );
 
 // Event Listeners

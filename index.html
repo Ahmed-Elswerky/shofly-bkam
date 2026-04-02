@@ -23,6 +23,11 @@
                 <button id="search-btn">Find</button>
             </div>
 
+            <div id="loader" class="loader-wrapper hidden">
+                <div class="spinner"></div>
+                <p>Searching database...</p>
+            </div>
+
             <div id="result-card" class="result-card hidden">
                 <div class="product-info">
                     <div class="brand" id="prod-brand">---</div>
@@ -45,8 +50,17 @@
             </div>
 
             <div id="not-found" class="info-message hidden">
-                Product not found. Try another barcode.
+                Product not found. added to missing list.
             </div>
+
+            <div id="missing-section" class="missing-section hidden">
+                <div class="missing-header">
+                    <h3>Missing Barcodes</h3>
+                    <button id="copy-missing-btn">Copy All</button>
+                </div>
+                <div id="missing-list" class="missing-list"></div>
+            </div>
+
             <div id="reader-wrapper">
                 <div id="reader"></div>
             </div>

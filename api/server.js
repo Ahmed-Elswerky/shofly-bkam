@@ -1,94 +1,183 @@
-const express = require('express');
-const cors = require('cors');
+const express = require("express");
+const fs = require("fs");
+const path = require("path");
+
 const app = express();
-app.use(cors());
 app.use(express.json());
 
-const OFF_BASE = 'https://world.openfoodfacts.org';
+const OFF_BASE = "https://world.openfoodfacts.org";
+const DB_PATH = path.join(__dirname, "egypt_supermarket_products_large.json");
 
-function normalizeProduct(raw) {
+let localDb = { products: [] };
+if (fs.existsSync(DB_PATH)) {
+  localDb = JSON.parse(fs.readFileSync(DB_PATH, "utf8"));
+}
+
+function normalizeOffProduct(raw) {
   if (!raw) return null;
   return {
+    source: "open_food_facts",
     barcode: raw.code || null,
     name: raw.product_name || raw.product_name_en || raw.generic_name || null,
     genericName: raw.generic_name || null,
-    brands: raw.brands ? raw.brands.split(',').map(s => s.trim()).filter(Boolean) : [],
-    categories: raw.categories ? raw.categories.split(',').map(s => s.trim()).filter(Boolean) : [],
+    brands: raw.brands
+      ? raw.brands
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [],
+    categories: raw.categories
+      ? raw.categories
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [],
     quantity: raw.quantity || null,
     image: raw.image_front_url || raw.image_url || null,
     ingredientsText: raw.ingredients_text || null,
     nutriments: raw.nutriments || {},
     countries: raw.countries || null,
-    url: raw.url || `https://world.openfoodfacts.org/product/${raw.code}`
+    url: raw.url || `https://world.openfoodfacts.org/product/${raw.code}`,
+  };
+}
+
+function normalizeLocalProduct(p) {
+  return {
+    source: "local_egypt_dataset",
+    barcode: p.barcode || null,
+    name: p.product_name?.en || null,
+    name_ar: p.product_name?.ar || null,
+    brand: p.brand || null,
+    category: p.category || null,
+    subcategory: p.subcategory || null,
+    size: p.size || null,
+    store: p.store || null,
+    price: p.price || null,
+    old_price: p.old_price ?? null,
+    discount_percent: p.discount_percent ?? null,
+    currency: p.currency || "EGP",
+    availability: p.availability || null,
+    tags: p.tags || [],
+    last_updated: p.last_updated || null,
+    source_url: p.source_url || null,
   };
 }
 
 async function getJson(url) {
   const res = await fetch(url, {
     headers: {
-      'User-Agent': 'egypt-product-lookup-demo/1.0 (contact: demo@example.com)'
-    }
+      "User-Agent":
+        "egypt-kitchen-product-lookup/1.0 (contact: demo@example.com)",
+    },
   });
-  if (!res.ok) {
-    throw new Error(`Upstream error ${res.status}`);
-  }
+  if (!res.ok) throw new Error(`Upstream error ${res.status}`);
   return res.json();
 }
 
-app.get('/health', (req, res) => {
-  res.json({ ok: true, service: 'product-lookup', source: 'Open Food Facts' });
+function localFindByBarcode(barcode) {
+  const items = localDb.products || [];
+  return items.find((p) => String(p.barcode || "") === String(barcode));
+}
+
+function localSearch(q) {
+  const s = String(q || "")
+    .trim()
+    .toLowerCase();
+  if (!s) return [];
+  const items = localDb.products || [];
+  return items
+    .filter((p) => {
+      const en = (p.product_name?.en || "").toLowerCase();
+      const ar = (p.product_name?.ar || "").toLowerCase();
+      const brand = (p.brand || "").toLowerCase();
+      const tags = Array.isArray(p.tags) ? p.tags.join(" ").toLowerCase() : "";
+      return (
+        en.includes(s) ||
+        ar.includes(s) ||
+        brand.includes(s) ||
+        tags.includes(s)
+      );
+    })
+    .slice(0, 25);
+}
+
+app.get("/health", (req, res) => {
+  res.json({
+    ok: true,
+    localProducts: (localDb.products || []).length,
+    sources: ["local_egypt_dataset", "open_food_facts"],
+  });
 });
 
-app.get('/product/:barcode', async (req, res) => {
+app.get("/product/:barcode", async (req, res) => {
   try {
-    const barcode = String(req.params.barcode || '').replace(/\D/g, '');
-    if (!barcode || barcode.length < 8) {
-      return res.status(400).json({ error: 'Invalid barcode. Expected 8-14 digits.' });
+    const barcode = String(req.params.barcode || "").replace(/\D/g, "");
+    if (!barcode || barcode.length < 6) {
+      return res.status(400).json({ error: "Invalid barcode" });
     }
 
-    const data = await getJson(`${OFF_BASE}/api/v0/product/${barcode}.json`);
-    if (!data || data.status !== 1 || !data.product) {
-      return res.status(404).json({ error: 'Product not found', barcode, source: 'Open Food Facts' });
+    const local = localFindByBarcode(barcode);
+    if (local) {
+      return res.json({
+        found: true,
+        source: "local_egypt_dataset",
+        product: normalizeLocalProduct(local),
+      });
     }
 
-    return res.json({
-      source: 'Open Food Facts',
-      found: true,
-      product: normalizeProduct(data.product)
+    try {
+      const data = await getJson(`${OFF_BASE}/api/v0/product/${barcode}.json`);
+      if (data && data.status === 1 && data.product) {
+        return res.json({
+          found: true,
+          source: "open_food_facts",
+          product: normalizeOffProduct(data.product),
+        });
+      }
+    } catch (_) {}
+
+    return res.status(404).json({
+      found: false,
+      barcode,
+      error: "Product not found in local Egypt dataset or Open Food Facts",
     });
   } catch (err) {
-    return res.status(502).json({ error: err.message || 'Lookup failed' });
+    return res.status(500).json({ error: err.message || "Lookup failed" });
   }
 });
 
-app.get('/search', async (req, res) => {
+app.get("/search", async (req, res) => {
   try {
-    const q = String(req.query.q || '').trim();
-    const page = Number(req.query.page || 1);
-    const pageSize = Math.min(Number(req.query.pageSize || 10), 50);
+    const q = String(req.query.q || "").trim();
+    if (!q) return res.status(400).json({ error: "Missing q query parameter" });
 
-    if (!q) {
-      return res.status(400).json({ error: 'Missing q query parameter' });
+    const localResults = localSearch(q).map(normalizeLocalProduct);
+    if (localResults.length > 0) {
+      return res.json({
+        found: true,
+        source: "local_egypt_dataset",
+        count: localResults.length,
+        products: localResults,
+      });
     }
 
-    const url = `${OFF_BASE}/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page=${page}&page_size=${pageSize}`;
+    const url = `${OFF_BASE}/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page=1&page_size=20`;
     const data = await getJson(url);
-    const products = Array.isArray(data.products) ? data.products.map(normalizeProduct) : [];
-
+    const products = Array.isArray(data.products)
+      ? data.products.map(normalizeOffProduct)
+      : [];
     return res.json({
-      source: 'Open Food Facts',
       found: products.length > 0,
-      count: data.count || products.length,
-      page,
-      pageSize,
-      products
+      source: "open_food_facts",
+      count: products.length,
+      products,
     });
   } catch (err) {
-    return res.status(502).json({ error: err.message || 'Search failed' });
+    return res.status(500).json({ error: err.message || "Search failed" });
   }
 });
 
-const serverless = require('serverless-http');
+const serverless = require("serverless-http");
 
 const PORT = process.env.PORT || 3000;
 

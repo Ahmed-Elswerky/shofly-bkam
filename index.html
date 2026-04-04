@@ -18,7 +18,17 @@
         </header>
 
         <main>
+            <div class="source-toggle-container">
+                <span class="toggle-label">Local JSON</span>
+                <label class="switch">
+                    <input type="checkbox" id="source-toggle">
+                    <span class="slider"></span>
+                </label>
+                <span class="toggle-label">API Requests</span>
+            </div>
+
             <div class="search-box">
+
                 <input type="text" id="manual-input" placeholder="Enter barcode manually..." maxlength="13">
                 <button id="search-btn">Find</button>
             </div>

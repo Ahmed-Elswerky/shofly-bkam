@@ -24,10 +24,11 @@ async function loadData() {
 }
 
 // Find product by barcode
-function findProduct(barcode) {
+async function findProduct(barcode) {
   const resultCard = document.getElementById("result-card");
   const notFound = document.getElementById("not-found");
   const loader = document.getElementById("loader");
+  const sourceToggle = document.getElementById("source-toggle");
 
   const cleanBarcode = barcode.trim();
   if (!cleanBarcode) return;
@@ -35,17 +36,38 @@ function findProduct(barcode) {
   // Reset UI
   resultCard.classList.add("hidden");
   notFound.classList.add("hidden");
-  loader.classList.add("hidden"); // Ensure loader is hidden
-
-  // Instant search using Map (O(1))
-  const product = productMap.get(cleanBarcode);
-
-  if (product) {
-    updateUI(product);
-    resultCard.classList.remove("hidden");
+  
+  if (sourceToggle.checked) {
+    // API SEARCH
+    loader.classList.remove("hidden");
+    try {
+      const response = await fetch(`http://localhost:3000/product/${cleanBarcode}`);
+      const data = await response.json();
+      
+      loader.classList.add("hidden");
+      if (data.found && data.product) {
+        updateUIFromAPI(data.product);
+        resultCard.classList.remove("hidden");
+      } else {
+        notFound.classList.remove("hidden");
+        addToMissing(cleanBarcode);
+      }
+    } catch (error) {
+      console.error("API Error:", error);
+      loader.classList.add("hidden");
+      alert("API server unreachable. Make sure it's running on port 3000.");
+    }
   } else {
-    notFound.classList.remove("hidden");
-    addToMissing(cleanBarcode);
+    // LOCAL SEARCH (Instant O(1))
+    const product = productMap.get(cleanBarcode);
+
+    if (product) {
+      updateUI(product);
+      resultCard.classList.remove("hidden");
+    } else {
+      notFound.classList.remove("hidden");
+      addToMissing(cleanBarcode);
+    }
   }
 }
 
@@ -65,7 +87,8 @@ function addToMissing(barcode) {
   }
 }
 
-// Update UI with product details
+
+// Update UI with product details (Local JSON format)
 function updateUI(product) {
   document.getElementById("prod-brand").textContent = product.brand;
   document.getElementById("prod-name-en").textContent = product.product_name.en;
@@ -81,6 +104,22 @@ function updateUI(product) {
   document.getElementById("prod-curr").textContent = product.currency;
   document.getElementById("prod-store").textContent =
     `${product.store.name} — ${product.store.city}`;
+  
+  // Ensure price section is visible
+  document.querySelector('.price-section').classList.remove('hidden');
+}
+
+// Update UI from API structure (Open Food Facts)
+function updateUIFromAPI(product) {
+  document.getElementById("prod-brand").textContent = (product.brands && product.brands[0]) || "Unknown Brand";
+  document.getElementById("prod-name-en").textContent = product.name || "Unknown Product";
+  document.getElementById("prod-name-ar").textContent = ""; // Hide or clear Arabic for OFF results
+  document.getElementById("prod-cat").textContent = (product.categories && product.categories[0]) || "General";
+  document.getElementById("prod-size").textContent = product.quantity || "N/A";
+
+  // Hide price section as OFF doesn't have local price data
+  document.querySelector('.price-section').classList.add('hidden');
+  document.getElementById("prod-store").textContent = "Open Food Facts (Live)";
 }
 
 // Scanner Success Callback

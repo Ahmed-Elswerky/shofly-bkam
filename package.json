@@ -1,0 +1,18 @@
+{
+  "name": "shofly-bkam",
+  "version": "1.0.0",
+  "description": "Smart Barcode Price Finder",
+  "main": "api/server.js",
+  "scripts": {
+    "start": "node api/server.js",
+    "build": "echo 'No build step required'"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "serverless-http": "^3.2.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

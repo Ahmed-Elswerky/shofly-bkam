@@ -41,7 +41,13 @@ async function findProduct(barcode) {
     // API SEARCH
     loader.classList.remove("hidden");
     try {
-      const response = await fetch(`http://localhost:3000/product/${cleanBarcode}`);
+      // Use relative path for production (Netlify), falling back to localhost:3000 for local dev
+      const apiPath = `/api/product/${cleanBarcode}`;
+      const apiUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && (window.location.port !== '8888')
+        ? `http://localhost:3000/product/${cleanBarcode}`
+        : apiPath;
+
+      const response = await fetch(apiUrl);
       const data = await response.json();
       
       loader.classList.add("hidden");

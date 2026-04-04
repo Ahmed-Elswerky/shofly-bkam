@@ -88,7 +88,14 @@ app.get('/search', async (req, res) => {
   }
 });
 
+const serverless = require('serverless-http');
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+
+if (process.env.NETLIFY) {
+  module.exports.handler = serverless(app);
+} else {
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
